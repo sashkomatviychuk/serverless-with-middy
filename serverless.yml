@@ -1,0 +1,110 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: matviichuk
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: demo-http
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: middy-serverless
+
+layers:
+  lodash:
+    path: layers/lodash
+    name: ${sls:stage}-lodash
+    description: Layer with common packages for Serverless Middy project
+    compatibleRuntimes:
+      - nodejs20.x
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - logs:CreateLogGroup
+        - logs:CreateLogStream
+        - logs:PutLogEvents
+        - dynamodb:*
+      Resource: '*'
+  environment:
+    ITEMS_TABLE: Items
+
+functions:
+  create:
+    handler: src/handlers/create.handler
+    events:
+      - httpApi:
+          path: /items
+          method: post
+    layers:
+      - !Ref LodashLambdaLayer
+  get:
+    handler: src/handlers/read.handler
+    events:
+      - httpApi:
+          path: /items
+          method: get
+    layers:
+      - !Ref LodashLambdaLayer
+  update:
+    handler: src/handlers/update.handler
+    events:
+      - httpApi:
+          path: /items/{id}
+          method: put
+  delete:
+    handler: src/handlers/delete.handler
+    events:
+      - httpApi:
+          path: /items/{id}
+          method: delete
+
+custom:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: false
+    exclude:
+      - 'aws-sdk'
+    packager: npm
+    target: node20
+    platform: node
+    concurrency: 10
+
+plugins:
+  - serverless-offline
+  # - serverless-esbuild
+
+resources:
+  Resources:
+    ItemsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Items
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        Tags:
+          - Key: Environment
+            Value: Development
+
+build:
+  esbuild:
+    bundle: true
+    external:
+      - '@aws-sdk/client-dynamodb'
+      - '@middy/core'
+      - '@middy/validator'
+    buildConcurrency: 10
+    minify: false
+    sourcemap: false
+    exclude:
+      - 'lodash.get'
+      - 'lodash.has'
+    #   - '@aws-sdk/*'
+
+package:
+  excludeDevDependencies: true
