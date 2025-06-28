@@ -98,12 +98,12 @@ build:
       - '@aws-sdk/client-dynamodb'
       - '@middy/core'
       - '@middy/validator'
+      - 'lodash.get'
+      - 'lodash.has'
     buildConcurrency: 10
     minify: false
     sourcemap: false
-    exclude:
-      - 'lodash.get'
-      - 'lodash.has'
+    # exclude:
     #   - '@aws-sdk/*'
 
 package:
